@@ -104,6 +104,7 @@ type ArchetypeEdge struct {
 }
 
 type EntityRecord struct {
+    Entity Entity
     Index int
     Archetype *Archetype
 }
@@ -157,7 +158,7 @@ func (self *World) NewArchetype(t Type) *Archetype {
         Id: self.GetNewId(),
         Type: t,
         Entities: []Entity{},
-        Components: []Column{},
+        Components: make([]Column, 128),
         Edges: make(map[ComponentId]*ArchetypeEdge, 1),
     }
 
@@ -213,6 +214,7 @@ func (self *World) NewEntity(t Type) EntityRecord {
     }
 
     rec := EntityRecord{
+        Entity: ent,
         Archetype: arch,
         Index: len(arch.Entities) - 1,
     }
@@ -231,7 +233,7 @@ func (self *World) getEntityRecord(ent Entity) (*EntityRecord, error) {
     return &rec, nil
 }
 
-func (self *World) GetEntityComponents(ent Entity) (*Column, error) {
+func (self *World) GetEntityComponents(ent Entity) (map[ComponentId]Component, error) {
     rec, err := self.getEntityRecord(ent)
     if err != nil {
         return nil, err
@@ -242,13 +244,13 @@ func (self *World) GetEntityComponents(ent Entity) (*Column, error) {
         return nil, EntityNotFoundError
     }
 
-    res := Column{}
+    res := make(map[ComponentId]Component, 1)
 
-    for i := range len(arch.Type) {
-        res = append(res, arch.Components[i][rec.Index])
+    for i, compId := range arch.Type {
+        res[compId] = arch.Components[i][rec.Index]
     }
 
-    return &res, nil
+    return res, nil
 }
 
 func (self *World) SetEntityComponent(ent Entity, comp Component) error {
@@ -270,6 +272,10 @@ func (self *World) SetEntityComponent(ent Entity, comp Component) error {
         rec, _ = self.getEntityRecord(ent)
         arch = rec.Archetype
         compIdx = getComponentIndexInType(arch.Type, comp.ComponentId())
+    }
+
+    if len(arch.Components[compIdx]) == 0 {
+        arch.Components[compIdx] = make([]Component, 128 * len(arch.Type))
     }
 
     arch.Components[compIdx][rec.Index] = comp

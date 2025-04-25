@@ -1,6 +1,11 @@
 package utils
 
-import "golang.org/x/exp/constraints"
+import (
+	"fmt"
+	"time"
+
+	"golang.org/x/exp/constraints"
+)
 
 func QuickSort[T constraints.Ordered] (arr[] T) []T {
     cpy := make([]T, len(arr))
@@ -75,4 +80,16 @@ func IndexOf[T constraints.Ordered] (arr []T, el T) int {
     }
 
     return -1
+}
+
+func MeasureTime[T any] (target func() T) (T, time.Duration) {
+    t := time.Now()
+
+    res := target()
+
+    dt := time.Now().Sub(t)
+
+    fmt.Println("Time consumed:", dt)
+
+    return res, time.Millisecond / dt
 }
