@@ -7,6 +7,7 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 
 	"github.com/cxncxl/gogame/internal/ecs"
+	"github.com/cxncxl/gogame/internal/math"
 	"github.com/cxncxl/gogame/internal/service"
 )
 
@@ -29,8 +30,10 @@ func main() {
             },
         })
         world.SetEntityComponent(rec.Entity, ecs.PositionComponent{
-            X: 50 + (uint(i) * 20),
-            Y: 50 + (uint(i) * 10),
+            Position: math.Vector2{
+                X: float64(50 + (uint(i) * 20)),
+                Y: float64(50 + (uint(i) * 10)),
+            },
         })
     }
 

@@ -24,6 +24,7 @@ func RenderSystem(w *World, dt time.Duration) {
     ren.Clear()
 
     for _, r := range renderables {
+        // todo: culling
         comps, _ := w.GetEntityComponents(r)
         pos, exists := comps[PositionComponentId]
         if !exists {
@@ -44,8 +45,9 @@ func RenderSystem(w *World, dt time.Duration) {
         ren.SetDrawColor(cren.Color[0], cren.Color[1], cren.Color[2], 0xff)
         err := ren.FillRect(
             &sdl.Rect{
-                X: int32(cpos.X),
-                Y: int32(cpos.Y),
+                // todo: map world coords to screen coords
+                X: int32(cpos.Position.X),
+                Y: int32(cpos.Position.Y),
                 W: 20,
                 H: 20,
             },

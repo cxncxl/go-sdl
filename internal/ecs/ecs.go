@@ -58,7 +58,13 @@ func (self Type) Key() typeKey {
 
 // TODO: implement
 func (self Type) EmptyComponents() Column {
-    return Column{}
+    res := Column{}
+
+    for _, id := range self {
+        res = append(res, emptyComponents[id])
+    }
+
+    return res
 }
 
 func (self Type) IncludesAll(comps ...ComponentId) bool {
@@ -157,8 +163,8 @@ func (self *World) NewArchetype(t Type) *Archetype {
     arch := Archetype{
         Id: self.GetNewId(),
         Type: t,
-        Entities: []Entity{},
-        Components: make([]Column, 128),
+        Entities: make([]Entity, 0),
+        Components: make([]Column, 0),
         Edges: make(map[ComponentId]*ArchetypeEdge, 1),
     }
 
@@ -272,10 +278,6 @@ func (self *World) SetEntityComponent(ent Entity, comp Component) error {
         rec, _ = self.getEntityRecord(ent)
         arch = rec.Archetype
         compIdx = getComponentIndexInType(arch.Type, comp.ComponentId())
-    }
-
-    if len(arch.Components[compIdx]) == 0 {
-        arch.Components[compIdx] = make([]Component, 128 * len(arch.Type))
     }
 
     arch.Components[compIdx][rec.Index] = comp
