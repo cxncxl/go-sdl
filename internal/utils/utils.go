@@ -91,5 +91,5 @@ func MeasureTime[T any] (target func() T) (T, time.Duration) {
 
     fmt.Println("Time consumed:", dt)
 
-    return res, time.Millisecond / dt
+    return res, dt
 }

@@ -16,6 +16,12 @@ func (self Id) String() string {
     return strconv.Itoa(int(self.raw))
 }
 
+func NewId(id rawId) Id {
+    return Id{
+        raw: id,
+    }
+}
+
 type Entity = Id
 type ComponentId = Id
 
@@ -266,7 +272,7 @@ func (self *World) SetEntityComponent(ent Entity, comp Component) error {
     }
 
     arch := rec.Archetype
-    compIdx := getComponentIndexInType(arch.Type, comp.ComponentId())
+    compIdx := GetComponentIndexInType(arch.Type, comp.ComponentId())
     if compIdx < 0 {
         newType := append(arch.Type, comp.ComponentId())
         newArch, ok := self.Archetypes[newType.Key()]
@@ -277,7 +283,7 @@ func (self *World) SetEntityComponent(ent Entity, comp Component) error {
         self.migrateEntity(ent, newArch)
         rec, _ = self.getEntityRecord(ent)
         arch = rec.Archetype
-        compIdx = getComponentIndexInType(arch.Type, comp.ComponentId())
+        compIdx = GetComponentIndexInType(arch.Type, comp.ComponentId())
     }
 
     arch.Components[compIdx][rec.Index] = comp
@@ -326,8 +332,8 @@ func (self *World) migrateEntity(ent Entity, to *Archetype) error {
     }
 
     for _, v := range from.Type {
-        tidx := getComponentIndexInType(to.Type, v)
-        fidx := getComponentIndexInType(from.Type, v)
+        tidx := GetComponentIndexInType(to.Type, v)
+        fidx := GetComponentIndexInType(from.Type, v)
         to.Components[tidx] = append(to.Components[tidx], from.Components[fidx][eidx])
     }
 
@@ -350,7 +356,7 @@ func (self *World) migrateEntity(ent Entity, to *Archetype) error {
     return nil
 }
 
-func getComponentIndexInType(t Type, comp ComponentId) int {
+func GetComponentIndexInType(t Type, comp ComponentId) int {
     for i, v := range t {
         if v.raw == comp.raw {
             return i

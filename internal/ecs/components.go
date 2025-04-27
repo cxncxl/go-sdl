@@ -15,10 +15,7 @@ type RenderComponent struct {
     Color [3]uint8
 }
 
-var RenderComponentId = ComponentId{
-    raw: 1, // ???
-}
-
+var RenderComponentId = GetWorld().GetNewId()
 func (RenderComponent) ComponentId() ComponentId {
     return RenderComponentId
 }
@@ -29,10 +26,7 @@ type PositionComponent struct {
     Position math.Vector2
 }
 
-var PositionComponentId = ComponentId{
-    raw: 2,
-}
-
+var PositionComponentId = GetWorld().GetNewId()
 func (PositionComponent) ComponentId() ComponentId {
     return PositionComponentId
 }
