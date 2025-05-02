@@ -1,6 +1,9 @@
 package math
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 type Vector2 struct {
     X float64
@@ -47,6 +50,10 @@ func (self *Vector2) Div(other Vector2) {
 }
 
 func (self *Vector2) DivScalar(other float64) {
+    if other == 0 {
+        other = 0.0001
+    }
+
     self.X /= other
     self.Y /= other
 }
@@ -73,4 +80,8 @@ func (self Vector2) Copy() Vector2 {
         X: self.X,
         Y: self.Y,
     }
+}
+
+func (self *Vector2) String() string {
+    return fmt.Sprintf("( %f; %f )", self.X, self.Y)
 }

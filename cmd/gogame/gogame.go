@@ -18,34 +18,42 @@ func main() {
     service.InitRenderer()
     defer service.DeinitRenderer()
 
+    service.InitInput()
+    defer service.DeinitInput()
+
     world := ecs.GetWorld()
 
-    for i := range 255 {
-        rec := world.NewEntity(ecs.NewType(ecs.PositionComponentId, ecs.RenderComponentId))
-        world.SetEntityComponent(rec.Entity, ecs.RenderComponent{
-            Color: [3]uint8{ 
-                0xff - uint8(i),
-                0x00 + (uint8(i) * 2),
-                0xff,
-            },
-        })
-        world.SetEntityComponent(rec.Entity, ecs.PositionComponent{
-            Position: math.Vector2{
-                X: float64(50 + (uint(i) * 20)),
-                Y: float64(50 + (uint(i) * 10)),
-            },
-        })
-    }
+    player := world.NewEntity(
+        ecs.NewType(
+            ecs.PlayerComponentId,
+            ecs.PositionComponentId,
+            ecs.RenderComponentId,
+        ),
+    )
+    world.SetEntityComponent(player.Entity, ecs.PlayerComponent{})
+    world.SetEntityComponent(player.Entity, ecs.PositionComponent{
+        Position: &math.Vector2{ X: 0, Y: 0 },
+    })
+    world.SetEntityComponent(player.Entity, ecs.RenderComponent{
+        Color: [3]uint8{
+            255, 190, 155,
+        },
+    })
 
     running := true
-    prevTime := time.Now()
     dt := time.Millisecond 
+    t := time.Now()
     for running == true {
+        clearFrame()
+
         for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
             switch event.(type) {
             case *sdl.QuitEvent:
                 running = false
                 break
+            case *sdl.KeyboardEvent:
+                e := event.(*sdl.KeyboardEvent)
+                service.Input().HandleEvent(e)
             }
         }
 
@@ -53,16 +61,22 @@ func main() {
             s(world, dt)
         }
 
-        t := time.Now()
-        dt = t.Sub(prevTime)
-
-        fmt.Println("Peformace ===========================")
-        fmt.Println("\tprevTime:", prevTime.Format(time.RFC3339Nano))
-        fmt.Println("\tcurrent time:", t.Format(time.RFC3339Nano))
-        fmt.Println("\tdt:", dt)
-        fmt.Println("\tfps:", 1_000_000_000 / dt.Nanoseconds())
-        fmt.Println("=====================================")
-
-        prevTime = t
+        dt, t = updateTime(t)
     }
+}
+
+func clearFrame() {}
+
+func updateTime(prevTime time.Time) (time.Duration, time.Time) {
+    t := time.Now()
+    dt := t.Sub(prevTime)
+
+    fmt.Println("Peformace ===========================")
+    fmt.Println("\tprevTime:", prevTime.Format(time.RFC3339Nano))
+    fmt.Println("\tcurrent time:", t.Format(time.RFC3339Nano))
+    fmt.Println("\tdt:", dt)
+    fmt.Println("\tfps:", 1_000_000_000 / dt.Nanoseconds())
+    fmt.Println("=====================================")
+
+    return dt, t
 }
