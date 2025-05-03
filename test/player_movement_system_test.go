@@ -1,12 +1,13 @@
 package test
 
 import (
+	"testing"
 	"time"
-    "testing"
 
 	"github.com/cxncxl/gogame/internal/ecs"
 	"github.com/cxncxl/gogame/internal/math"
 	"github.com/cxncxl/gogame/internal/service"
+	"github.com/cxncxl/gogame/internal/system"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -15,13 +16,13 @@ func setupTest() (*ecs.World, *math.Vector2) {
     playerRec := w.NewEntity(
         ecs.NewType(
             ecs.PlayerComponentId,
-            ecs.PositionComponentId,
+            ecs.TransformComponentId,
         ),
     )
 
     playerPos := math.Vector2{ X: 0, Y: 0 }
 
-    w.SetEntityComponent(playerRec.Entity, ecs.PositionComponent{
+    w.SetEntityComponent(playerRec.Entity, ecs.TransformComponent{
         Position: &playerPos,
     })
 
@@ -42,12 +43,12 @@ func TestPlayerMovement(t *testing.T) {
 
     service.Input().HandleEvent(&event)
 
-    ecs.PlayerMovementSystem(w, time.Microsecond)
+    system.PlayerMovementSystem(w, time.Microsecond)
 
-    if position.Y != -1 * ecs.PlayerSpeed {
+    if position.Y != -1 * system.PlayerSpeed {
         t.Errorf(
             "Movement not handling W button. Expected position: %v, actual: %v\n",
-            math.Vector2{ Y: -1 * ecs.PlayerSpeed },
+            math.Vector2{ Y: -1 * system.PlayerSpeed },
             position,
         )
     }
@@ -61,12 +62,12 @@ func TestPlayerMovement(t *testing.T) {
 
     service.Input().HandleEvent(&event)
 
-    ecs.PlayerMovementSystem(w, time.Microsecond)
+    system.PlayerMovementSystem(w, time.Microsecond)
     
-    if position.Y != -1 * ecs.PlayerSpeed {
+    if position.Y != -1 * system.PlayerSpeed {
         t.Errorf(
             "Movement not handling button release. Expected position: %v, actual: %v\n",
-            math.Vector2{ Y: -1 * ecs.PlayerSpeed },
+            math.Vector2{ Y: -1 * system.PlayerSpeed },
             position,
         )
     }

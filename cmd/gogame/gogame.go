@@ -9,6 +9,7 @@ import (
 	"github.com/cxncxl/gogame/internal/ecs"
 	"github.com/cxncxl/gogame/internal/math"
 	"github.com/cxncxl/gogame/internal/service"
+	"github.com/cxncxl/gogame/internal/system"
 )
 
 func main() {
@@ -21,25 +22,25 @@ func main() {
     service.InitInput()
     defer service.DeinitInput()
 
+    service.InitAssetsManager()
+    defer service.DeinitAssetsManager()
+
     world := ecs.GetWorld()
 
     player := world.NewEntity(
         ecs.NewType(
             ecs.PlayerComponentId,
-            ecs.PositionComponentId,
-            ecs.RenderComponentId,
+            ecs.TransformComponentId,
+            ecs.SpriteRendererComponentId,
         ),
     )
     world.SetEntityComponent(player.Entity, ecs.PlayerComponent{})
-    world.SetEntityComponent(player.Entity, ecs.PositionComponent{
+    world.SetEntityComponent(player.Entity, ecs.TransformComponent{
         Position: &math.Vector2{ X: 0, Y: 0 },
     })
-    world.SetEntityComponent(player.Entity, ecs.RenderComponent{
-        Color: [3]uint8{
-            255, 190, 155,
-        },
+    world.SetEntityComponent(player.Entity, ecs.SpriteRendererComponent{
+        SpritePath: "image.png",
     })
-
     running := true
     dt := time.Millisecond 
     t := time.Now()
@@ -57,7 +58,7 @@ func main() {
             }
         }
 
-        for _, s := range ecs.Systems {
+        for _, s := range system.Systems {
             s(world, dt)
         }
 

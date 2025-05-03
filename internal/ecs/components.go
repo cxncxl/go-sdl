@@ -5,31 +5,42 @@ import "github.com/cxncxl/gogame/internal/math"
 // --- Shared ------------
 
 var emptyComponents = map[ComponentId]Component {
-    RenderComponentId: RenderComponent{},
-    PositionComponentId: PositionComponent{},
+    BoxRendererComponentId: BoxRendererComponent{},
+    TransformComponentId: TransformComponent{},
     PlayerComponentId: PlayerComponent{},
 }
 
 // --- Render ------------
 
-type RenderComponent struct {
+type BoxRendererComponent struct {
     Color [3]uint8
 }
 
-var RenderComponentId = GetWorld().GetNewId()
-func (RenderComponent) ComponentId() ComponentId {
-    return RenderComponentId
+var BoxRendererComponentId = GetWorld().GetNewId()
+func (BoxRendererComponent) ComponentId() ComponentId {
+    return BoxRendererComponentId
+}
+
+type SpriteRendererComponent struct {
+    SpritePath string
+}
+
+var SpriteRendererComponentId = GetWorld().GetNewId()
+func (SpriteRendererComponent) ComponentId() ComponentId {
+    return SpriteRendererComponentId
 }
 
 // --- Position ----------
 
-type PositionComponent struct {
+type TransformComponent struct {
     Position *math.Vector2
+    Rotation *math.Vector2
+    Scale    *math.Vector2
 }
 
-var PositionComponentId = GetWorld().GetNewId()
-func (PositionComponent) ComponentId() ComponentId {
-    return PositionComponentId
+var TransformComponentId = GetWorld().GetNewId()
+func (TransformComponent) ComponentId() ComponentId {
+    return TransformComponentId
 }
 
 // --- Player -----------
