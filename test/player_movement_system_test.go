@@ -43,9 +43,11 @@ func TestPlayerMovement(t *testing.T) {
 
     service.Input().HandleEvent(&event)
 
-    system.PlayerMovementSystem(w, time.Microsecond)
+    dt := time.Millisecond
 
-    if position.Y != -1 * system.PlayerSpeed {
+    system.PlayerMovementSystem(w, dt)
+
+    if position.Y != -1 * system.PlayerSpeed * float64(dt.Milliseconds()) {
         t.Errorf(
             "Movement not handling W button. Expected position: %v, actual: %v\n",
             math.Vector2{ Y: -1 * system.PlayerSpeed },
@@ -62,9 +64,9 @@ func TestPlayerMovement(t *testing.T) {
 
     service.Input().HandleEvent(&event)
 
-    system.PlayerMovementSystem(w, time.Microsecond)
+    system.PlayerMovementSystem(w, dt)
     
-    if position.Y != -1 * system.PlayerSpeed {
+    if position.Y != -1 * system.PlayerSpeed * float64(dt.Milliseconds()) {
         t.Errorf(
             "Movement not handling button release. Expected position: %v, actual: %v\n",
             math.Vector2{ Y: -1 * system.PlayerSpeed },

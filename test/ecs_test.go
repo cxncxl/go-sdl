@@ -46,6 +46,34 @@ func TestCreateEntityWithType(t *testing.T) {
     }
 }
 
+func TestRemoveEntity(t *testing.T) {
+    w := ecs.GetWorld()
+
+    entsCountBefore := len(w.Entities)
+
+    lenArchCompsBefore := len(
+        w.GetArchetypeByType(ecstype).Components,
+    )
+
+    rec := w.NewEntity(ecstype)
+    err := w.RemoveEntity(rec.Entity)
+    if err != nil {
+        t.Error(err)
+    }
+
+    if len(w.Entities) != entsCountBefore {
+        t.Error("Deleting an entity didn't decrease entities count")
+    }
+
+    if len(rec.Archetype.Components) != lenArchCompsBefore {
+        t.Errorf(
+            "Deleting entity didn't delete component. Expected: %d, Actual: %d\n",
+            lenArchCompsBefore,
+            len(rec.Archetype.Components),
+        )
+    }
+}
+
 func TestSetComponent(t *testing.T) {
     w := ecs.GetWorld()
 
@@ -64,6 +92,24 @@ func TestSetComponent(t *testing.T) {
 
     if dcomp.Val != 69420 {
         t.Error("Component's value invalid")
+    }
+}
+
+func TestAddComponent(t *testing.T) {
+    w := ecs.GetWorld()
+
+    rec := w.NewEntity(ecs.Type{ dummyComp1CompId })
+
+    w.SetEntityComponent(rec.Entity, dummyComp1{ Val: 123 })
+    w.SetEntityComponent(rec.Entity, dummyComp2{ Val: 456 })
+
+    comps, err := w.GetEntityComponents(rec.Entity)
+    if err != nil {
+        t.Error(err)
+    }
+
+    if len(comps) != 2 {
+        t.Errorf("Entity only has %d components\n", len(comps))
     }
 }
 
@@ -107,7 +153,7 @@ type dummyComp2 struct {
 }
 var dummyComp2CompId = ecs.GetWorld().GetNewId()
 func (dummyComp2) ComponentId() ecs.ComponentId {
-    return dummyComp1CompId
+    return dummyComp2CompId
 }
 
 type queryTestComp struct {

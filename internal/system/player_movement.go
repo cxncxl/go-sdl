@@ -2,6 +2,7 @@ package system
 
 import (
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/cxncxl/gogame/internal/ecs"
@@ -29,7 +30,11 @@ func PlayerMovementSystem(w *ecs.World, dt time.Duration) {
         return
     }
 
-    playerPosition := playerComponents[ecs.TransformComponentId].(ecs.TransformComponent)
+    playerPosition, ok := playerComponents[ecs.TransformComponentId].(ecs.TransformComponent)
+    if !ok {
+        slog.Error("Error getting TransformComponent")
+        return
+    }
 
     movement := math.Vector2{}
 

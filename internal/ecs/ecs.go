@@ -1,6 +1,7 @@
 package ecs
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 
@@ -25,16 +26,21 @@ func NewId(id rawId) Id {
 type Entity = Id
 type ComponentId = Id
 
-type Component interface {
-    ComponentId() ComponentId
-}
-
 // Each entity can have several components on it
 // Those components will define entities type
 type Type []ComponentId
 // Used for Type as map's key
 type typeKey string
 var BaseType = Type{}
+
+func (self Type) EmptyComponents() []Component {
+    res := make([]Component, len(self))
+    for i, t := range self {
+        res[i] = emptyComponents[t]
+    }
+
+    return res
+}
 
 func NewType(components ...ComponentId) Type {
     return utils.Map(
@@ -62,17 +68,6 @@ func (self Type) Key() typeKey {
     return typeKey(res)
 }
 
-// TODO: implement
-func (self Type) EmptyComponents() Column {
-    res := Column{}
-
-    for _, id := range self {
-        res = append(res, emptyComponents[id])
-    }
-
-    return res
-}
-
 func (self Type) IncludesAll(comps ...ComponentId) bool {
     for _, c := range comps {
         found := false
@@ -96,7 +91,7 @@ func (self Type) IncludesAll(comps ...ComponentId) bool {
 type Column = []Component
 
 type ArchetypeId = Id
-type Archetype = struct {
+type Archetype struct {
     Id ArchetypeId
     Type Type
     Components []Column
@@ -106,8 +101,17 @@ type Archetype = struct {
     // [1, 2].Edges.Add[5] == [1, 2, 5]
     // [1, 5, 8].Edges.Remove[5] == [1, 8]
     Edges map[ComponentId]*ArchetypeEdge
-    // Components[i] is related to Entity[i]
+    // Components[comp][i] is related to Entity[i]
     Entities []Entity
+}
+func (self Archetype) String() string {
+    return fmt.Sprintf(
+        "Archetype { \n\tid: %d, \n\ttype: %v, \n\tcomponents: %v, \n\tentities: %v \n}",
+        self.Id.raw,
+        self.Type,
+        self.Components,
+        self.Entities,
+    )
 }
 
 type ArchetypeEdge struct {
@@ -217,12 +221,12 @@ func (self *World) NewEntity(t Type) EntityRecord {
 
     arch.Entities = append(arch.Entities, ent)
 
-    comps := t.EmptyComponents()
     if len(arch.Components) == 0 {
-        arch.Components = make([]Column, len(comps))
+        arch.Components = make([]Column, len(t))
     }
-    for i, comp := range comps {
-        arch.Components[i] = append(arch.Components[i], comp)
+    empties := t.EmptyComponents()
+    for i, v := range empties {
+        arch.Components[i] = append(arch.Components[i], v)
     }
 
     rec := EntityRecord{
@@ -236,13 +240,45 @@ func (self *World) NewEntity(t Type) EntityRecord {
     return rec
 }
 
-func (self *World) getEntityRecord(ent Entity) (*EntityRecord, error) {
-    rec, ok := self.Entities[ent]
-    if ok == false {
-        return nil, EntityNotFoundError
+func (self *World) RemoveEntity(ent Entity) error {
+    rec, err := self.getEntityRecord(ent)
+    if err != nil {
+        return err
     }
 
-    return &rec, nil
+    rec.Archetype.Entities = utils.Filter(
+        rec.Archetype.Entities,
+        func(_ Entity, i int) bool {
+            return i != rec.Index
+        },
+    )
+
+    for i := range rec.Archetype.Components {
+        rec.Archetype.Components[i] = utils.Filter(
+            rec.Archetype.Components[i],
+            func(_ Component, j int) bool {
+                return j != rec.Index
+            },
+        )
+    }
+
+    for id, other := range self.Entities {
+        if other.Archetype.Id.raw != rec.Archetype.Id.raw {
+            continue
+        }
+
+        if other.Index < rec.Index {
+            continue
+        }
+
+        other.Index = other.Index - 1
+
+        self.Entities[id] = other
+    }
+
+    delete(self.Entities, ent)
+
+    return nil
 }
 
 func (self *World) GetEntityComponents(ent Entity) (map[ComponentId]Component, error) {
@@ -252,6 +288,7 @@ func (self *World) GetEntityComponents(ent Entity) (map[ComponentId]Component, e
     }
 
     arch := rec.Archetype
+    fmt.Println(arch)
     if arch == nil {
         return nil, EntityNotFoundError
     }
@@ -275,19 +312,48 @@ func (self *World) SetEntityComponent(ent Entity, comp Component) error {
     compIdx := GetComponentIndexInType(arch.Type, comp.ComponentId())
     if compIdx < 0 {
         newType := append(arch.Type, comp.ComponentId())
-        newArch, ok := self.Archetypes[newType.Key()]
-        if ok == false {
+        newArch, exists := self.Archetypes[newType.Key()]
+        if !exists {
             newArch = self.NewArchetype(newType)
         }
 
         self.migrateEntity(ent, newArch)
+
         rec, _ = self.getEntityRecord(ent)
+
         arch = rec.Archetype
         compIdx = GetComponentIndexInType(arch.Type, comp.ComponentId())
+
+        arch.Components[compIdx] = append(arch.Components[compIdx], comp)
+
+        return nil
     }
 
     arch.Components[compIdx][rec.Index] = comp
     
+    return nil
+}
+
+func (self *World) RemoveEntityComponent(ent Entity, comp ComponentId) error {
+    rec, err := self.getEntityRecord(ent)
+    if err != nil {
+        return err
+    }
+
+    arch := rec.Archetype
+    archType := arch.Type
+
+    newType := utils.Filter(archType, func(v ComponentId, _ int) bool {
+        return v.raw != comp.raw
+    })
+
+    newArch := self.GetArchetypeByType(newType)
+    if newArch == nil {
+        newArch = self.NewArchetype(newType)
+    }
+
+    self.migrateEntity(ent, newArch)
+
     return nil
 }
 
@@ -321,7 +387,7 @@ func (self *World) migrateEntity(ent Entity, to *Archetype) error {
     }
 
     from := rec.Archetype
-    eidx := rec.Index
+    entityId := rec.Index
 
     to.Entities = append(to.Entities, ent)
     rec.Archetype = to
@@ -332,28 +398,60 @@ func (self *World) migrateEntity(ent Entity, to *Archetype) error {
     }
 
     for _, v := range from.Type {
-        tidx := GetComponentIndexInType(to.Type, v)
-        fidx := GetComponentIndexInType(from.Type, v)
-        to.Components[tidx] = append(to.Components[tidx], from.Components[fidx][eidx])
+        compTo := GetComponentIndexInType(to.Type, v)
+        compFrom := GetComponentIndexInType(from.Type, v)
+
+        fmt.Println("to     from    ent")
+        fmt.Printf("%d\t%d\t%d\t", compTo, compFrom, entityId)
+
+        if compTo >= 0 && compFrom >= 0 {
+            to.Components[compTo] = append(
+                to.Components[compTo],
+                from.Components[compFrom][entityId],
+            )
+        }
     }
 
     from.Entities = slices.Delete(
         from.Entities,
-        eidx,
-        eidx + 1,
+        entityId,
+        entityId + 1,
     )
     
     for i := range from.Components {
         from.Components[i] = slices.Delete(
             from.Components[i],
-            eidx,
-            eidx + 1,
+            entityId,
+            entityId + 1,
         )
+    }
+
+    for id, other := range self.Entities {
+        if other.Archetype.Id.raw != rec.Archetype.Id.raw {
+            continue
+        }
+
+        if other.Index < rec.Index {
+            continue
+        }
+
+        other.Index = other.Index - 1
+
+        self.Entities[id] = other
     }
 
     self.Entities[ent] = *rec
 
     return nil
+}
+
+func (self *World) getEntityRecord(ent Entity) (*EntityRecord, error) {
+    rec, ok := self.Entities[ent]
+    if ok == false {
+        return nil, EntityNotFoundError
+    }
+
+    return &rec, nil
 }
 
 func GetComponentIndexInType(t Type, comp ComponentId) int {
